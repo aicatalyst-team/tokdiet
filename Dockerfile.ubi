@@ -1,0 +1,53 @@
+# Dockerfile.ubi — UBI-based container for TokDiet LLM token proxy
+# Builds the TypeScript project, patches loopback binding for container networking,
+# and runs the proxy + dashboard on ports 7787 and 7878.
+
+FROM registry.access.redhat.com/ubi9/nodejs-22:latest AS builder
+
+# Switch to root for system package installs (better-sqlite3 needs build tools)
+USER 0
+
+# Install native build dependencies for better-sqlite3
+RUN dnf install -y gcc-c++ make python3 && dnf clean all
+
+# Copy package files first for layer caching
+COPY package.json package-lock.json ./
+
+# Install dependencies (including native modules)
+RUN npm ci --ignore-scripts=false
+
+# Copy remaining source
+COPY . .
+
+# Patch hardcoded 127.0.0.1 binding to respect TOKDIET_HOST env var (defaults to 0.0.0.0)
+# proxy.ts: server.listen(config.proxyPort, '127.0.0.1')
+# dashboard.ts: server.listen(port, '127.0.0.1')
+RUN sed -i "s|server.listen(config.proxyPort, '127.0.0.1')|server.listen(config.proxyPort, process.env.TOKDIET_HOST \|\| '0.0.0.0')|" src/proxy.ts && \
+    sed -i "s|server.listen(port, '127.0.0.1')|server.listen(port, process.env.TOKDIET_HOST \|\| '0.0.0.0')|" src/dashboard.ts
+
+# Build TypeScript to dist/
+RUN npm run build
+
+# ── Runtime stage ──────────────────────────────────────────────────────────────
+FROM registry.access.redhat.com/ubi9/nodejs-22-minimal:latest
+
+# Copy built dist, node_modules, and required assets
+COPY --from=builder /opt/app-root/src/dist ./dist
+COPY --from=builder /opt/app-root/src/node_modules ./node_modules
+COPY --from=builder /opt/app-root/src/package.json ./package.json
+COPY --from=builder /opt/app-root/src/pricing.json ./pricing.json
+COPY --from=builder /opt/app-root/src/src/dashboard/index.html ./src/dashboard/index.html
+
+# Environment defaults
+ENV TOKDIET_HOST=0.0.0.0
+ENV NODE_ENV=production
+
+# Ensure data directory exists and is writable by arbitrary UID
+RUN mkdir -p /opt/app-root/src/.tokdiet && \
+    chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
+
+EXPOSE 7787 7878
+
+USER 1001
+
+CMD ["node", "dist/cli.js", "start", "--port", "7787", "--dashboard-port", "7878"]
