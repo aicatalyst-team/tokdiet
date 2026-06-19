@@ -47,17 +47,17 @@ spec:
               cpu: "500m"
           readinessProbe:
             httpGet:
-              path: /stats
+              path: /api/summary
               port: 7878
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 3
-            failureThreshold: 3
+            failureThreshold: 6
           livenessProbe:
             httpGet:
-              path: /stats
+              path: /api/summary
               port: 7878
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 5
