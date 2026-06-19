@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tokdiet
+  namespace: poc-tokdiet
+  labels:
+    app: tokdiet
+    app.kubernetes.io/name: tokdiet
+    app.kubernetes.io/part-of: tokdiet
+spec:
+  selector:
+    app: tokdiet
+  ports:
+    - name: proxy
+      port: 7787
+      targetPort: 7787
+      protocol: TCP
+    - name: dashboard
+      port: 7878
+      targetPort: 7878
+      protocol: TCP
+  type: ClusterIP

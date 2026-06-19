@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: poc-tokdiet
+  labels:
+    app.kubernetes.io/part-of: tokdiet
+    autopoc.redhat.com/managed: "true"

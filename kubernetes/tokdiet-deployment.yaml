@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tokdiet
+  namespace: poc-tokdiet
+  labels:
+    app: tokdiet
+    app.kubernetes.io/name: tokdiet
+    app.kubernetes.io/part-of: tokdiet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tokdiet
+  template:
+    metadata:
+      labels:
+        app: tokdiet
+        app.kubernetes.io/name: tokdiet
+    spec:
+      imagePullSecrets:
+        - name: quay-pull-secret
+      containers:
+        - name: tokdiet
+          image: quay.io/aicatalyst/tokdiet:latest
+          command: ["/usr/bin/node", "dist/cli.js", "start", "--port", "7787", "--dashboard-port", "7878"]
+          ports:
+            - containerPort: 7787
+              name: proxy
+              protocol: TCP
+            - containerPort: 7878
+              name: dashboard
+              protocol: TCP
+          env:
+            - name: TOKDIET_HOST
+              value: "0.0.0.0"
+            - name: NODE_ENV
+              value: "production"
+            - name: HOME
+              value: "/opt/app-root/src"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /stats
+              port: 7878
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /stats
+              port: 7878
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+      securityContext:
+        runAsNonRoot: true
