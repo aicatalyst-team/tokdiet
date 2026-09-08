@@ -1,4 +1,10 @@
-# tokdiet
+> [!WARNING]
+> **This repository is archived.**
+>
+> Archived on 2026-09-08 by the AI Catalyst Platform Team.
+> It is read-only and no longer maintained.
+
+---# tokdiet
 
 **Your AI agent is paying to send the same file dump five times.** `tokdiet` is a local proxy that sits between your agent and the model API, meters every token, puts your bloated context **on a diet** — and *proves* the answer didn't get worse.
 
